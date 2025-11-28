@@ -5,6 +5,7 @@ const CONFIG = {
         TILES: "/Tuiles/",
         MOVE: "/Characters/move/",
         CHARACTERS: "/Characters/",
+        QUESTS: "/Quests/",
         USERS: "/Users/",
         LOGOUT: "/logout"
     },

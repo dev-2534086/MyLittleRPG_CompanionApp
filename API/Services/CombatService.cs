@@ -25,23 +25,27 @@ namespace API_Pokemon.Services
     public class CombatService : ICombatService
     {
         private readonly MonsterContext _context;
+        private readonly IMonstreService _monstreService;
         private readonly Random _random = new();
 
-        public CombatService(MonsterContext context)
+        public CombatService(MonsterContext context, IMonstreService monstreService)
         {
             _context = context;
+            _monstreService = monstreService;
         }
 
-        // --- Méthode utilitaire : gère un tour de combat ---
+        // Calcule les dégâts du joueur et du monstre pour un tour donné
+        // Le facteur aléatoire rend les combats moins déterministes
         private (int degatsJoueur, int degatsMonstre, double facteurAleatoire) CalculerDegats(Character joueur, InstanceMonstre monstre)
         {
-            double facteurAleatoire = _random.NextDouble() * (1.25 - 0.8) + 0.8;
+            double facteurAleatoire = _random.NextDouble() * (1.25 - 0.8) + 0.8; // entre 0.8 et 1.25
             int degatsJoueur = Math.Max(1, (int)((joueur.Attack - monstre.CalculerDefense()) * facteurAleatoire));
             int degatsMonstre = Math.Max(1, (int)((monstre.CalculerAttaque() - joueur.Defense) * facteurAleatoire));
             return (degatsJoueur, degatsMonstre, facteurAleatoire);
         }
 
-        // --- Simulation sans effet réel ---
+        // Simulation du combat (aucune modification dans la base)
+        // Sert uniquement à prédire l'issue possible d’un combat
         public CombatResult SimulerCombat(Character joueur, InstanceMonstre monstre)
         {
             var result = new CombatResult();
@@ -54,6 +58,7 @@ namespace API_Pokemon.Services
                 tour++;
                 var (degatsJoueur, degatsMonstre, _) = CalculerDegats(joueur, monstre);
 
+                // Application des dégâts pour le tour
                 hpMonstre = Math.Max(0, hpMonstre - degatsJoueur);
                 hpJoueur = Math.Max(0, hpJoueur - degatsMonstre);
 
@@ -64,6 +69,7 @@ namespace API_Pokemon.Services
 
             result.NombreTours = tour;
 
+            // Détermination du vainqueur
             if (hpMonstre <= 0)
             {
                 result.VictoireJoueur = true;
@@ -79,7 +85,7 @@ namespace API_Pokemon.Services
             return result;
         }
 
-        // --- Combat réel avec effets persistants ---
+        // Combat réel : modifie l’état du joueur, du monstre et la base de données
         public CombatResult ExecuterCombat(Character joueur, InstanceMonstre monstre)
         {
             var result = new CombatResult();
@@ -90,6 +96,7 @@ namespace API_Pokemon.Services
                 tour++;
                 var (degatsJoueur, degatsMonstre, _) = CalculerDegats(joueur, monstre);
 
+                // Application des dégâts réels
                 monstre.PointsVieActuels = Math.Max(0, monstre.PointsVieActuels - degatsJoueur);
                 joueur.Hp = Math.Max(0, joueur.Hp - degatsMonstre);
 
@@ -100,15 +107,17 @@ namespace API_Pokemon.Services
 
             result.NombreTours = tour;
 
+            // Victoire : gain d’expérience et suppression du monstre
             if (monstre.PointsVieActuels <= 0)
             {
                 result.VictoireJoueur = true;
                 result.ExperienceGagnee = monstre.CalculerExperienceDonnee();
                 joueur.GagnerExperience(result.ExperienceGagnee);
 
-                _context.InstanceMonstres.Remove(monstre);
+                _monstreService.SupprimerMonstre(monstre.MonstreId);
                 result.Message = $"Victoire en {tour} tours ! Vous gagnez {result.ExperienceGagnee} XP.";
             }
+            // Défaite : le joueur est renvoyé à sa ville
             else
             {
                 result.DefaiteJoueur = true;
@@ -116,6 +125,7 @@ namespace API_Pokemon.Services
                 result.Message = $"Défaite en {tour} tours ! Vous êtes téléporté à votre ville domicile.";
             }
 
+            // Sauvegarde des modifications dans la base
             _context.SaveChanges();
             return result;
         }

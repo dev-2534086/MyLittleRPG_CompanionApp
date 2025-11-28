@@ -36,6 +36,35 @@ async function loadTilesForPosition(x, y) {
 }
 
 /**
+ * Charge une tuile précise depuis l'API
+ * @param {number} x - Position X de la tuile
+ * @param {number} y - Position Y de la tuile
+ * @returns {Promise<Object|null>} - Données de la tuile ou null si erreur
+ */
+async function loadTileForPosition(x, y) {
+    try {
+        // Ici, apiService.getTile renvoie déjà un objet JSON ou null
+        const tileData = await apiService.getTile(x, y);
+
+        if (!tileData) {
+            console.warn(`Erreur lors du chargement de la tuile (${x}, ${y})`);
+            return null;
+        }
+
+        // Stocker la tuile dans le gameState
+        const key = `${x},${y}`;
+        gameState.generatedTiles[key] = tileData;
+
+        return tileData;
+    } catch (error) {
+        console.error(`Erreur API pour la tuile (${x},${y}):`, error);
+        return null;
+    }
+}
+
+
+
+/**
  * Obtient l'URL de l'image pour un type de tuile donné
  * @param {string} type - Type de tuile
  * @returns {string} - URL de l'image
@@ -75,3 +104,11 @@ async function fetchCharacter(email) {
     return await apiService.getCharacter(email);
 }
 
+/**
+ * Récupère les quêtes du personnage
+ * @param {string} email - Email de l'utilisateur
+ * @returns {Promise<Object|null>} - Données du personnage ou null
+ */
+async function fetchQuests(email) {
+    return await apiService.getQuests(email);
+}

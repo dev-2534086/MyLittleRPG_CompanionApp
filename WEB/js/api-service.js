@@ -54,16 +54,18 @@ class ApiService {
      */
     async handleHttpError(response) {
         let errorMessage = 'Erreur inconnue';
-        
         try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-            // Si pas de JSON, utiliser le texte brut
-            errorMessage = await response.text() || errorMessage;
+            const text = await response.text();  // lire une seule fois
+            try {
+                const errorData = JSON.parse(text);
+                errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch {
+                errorMessage = text || errorMessage;
+            }
+        } catch (e) {
+            console.warn("Impossible de lire le corps de la réponse:", e);
         }
-
-        // Messages d'erreur spécifiques selon le code
+    
         switch (response.status) {
             case 401:
                 this.showUserError('Session expirée. Veuillez vous reconnecter.');
@@ -82,29 +84,29 @@ class ApiService {
                 this.showUserError(errorMessage);
         }
     }
+    
 
     /**
-     * Affiche une erreur à l'utilisateur de manière cohérente
+     * Affiche une erreur à l'utilisateur sous forme de toast
      * @param {string} message - Message d'erreur
      */
     showUserError(message) {
-        // Recherche d'un élément de message existant
-        let messageElement = document.getElementById('message') || 
-                            document.getElementById('error-message') ||
-                            document.querySelector('.error-message');
-            
-        if (!messageElement) {
-            // Créer un élément temporaire si aucun n'existe
-            messageElement = document.createElement('div');
-            messageElement.id = 'temp-error-message';
-            messageElement.style.cssText = 'color: red; margin: 10px 0;';
-            document.body.appendChild(messageElement);
+        const container = document.getElementById('toast-container');
+        if (!container) {
+            console.error("❌ Impossible d'afficher le message : aucun élément avec l'id 'toast-container' trouvé.");
+            return;
         }
 
-        messageElement.textContent = `❌ ${message}`;
-        messageElement.style.color = 'red';
-        messageElement.style.display = 'block';
+        const toast = document.createElement('div');
+        toast.className = 'toast error-toast';
+        toast.textContent = `❌ ${message}`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 4000);
     }
+
 
     /**
      * Déconnexion sécurisée
@@ -135,6 +137,10 @@ class ApiService {
     async getTiles(x, y) {
         return await this.makeRequest(`${this.endpoints.TILES}Grille/${x}/${y}`);
     }
+    
+    async getTile(x, y) {
+        return await this.makeRequest(`${this.endpoints.TILES}${x}/${y}`);
+    }
 
     /**
      * Déplace le personnage
@@ -164,6 +170,18 @@ class ApiService {
         
         const result = await this.makeRequest(`${this.endpoints.CHARACTERS}${encodeURIComponent(email)}`);
         return result?.character || null;
+    }
+
+    /**
+     * Récupère les quêtes du personnage
+     * @param {string} email - Email de l'utilisateur
+     * @returns {Promise<Object|null>} - Données du personnage ou null
+     */
+    async getQuests(email) {
+        if (!email) return null;
+        
+        const result = await this.makeRequest(`${this.endpoints.QUESTS}${encodeURIComponent(email)}`);
+        return result?.quests || null;
     }
 
     /**

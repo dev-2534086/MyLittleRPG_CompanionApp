@@ -28,6 +28,7 @@ async function simulateCombat(monsterId) {
         
         if (result) {
             displayCombatResult(result);
+            updateQuests(gameState.userEmail);
         }
     } catch (error) {
         console.error('Erreur simulation combat:', error);
@@ -99,6 +100,7 @@ function getCombatMessageClass(result) {
         return 'combat-victory';
     } else if (result.defaiteJoueur) {
         return 'combat-defeat';
+        
     }
     return 'combat-neutral';
 }
@@ -153,16 +155,38 @@ function buildCombatDetailsHtml(result) {
 }
 
 /**
- * Affiche le résultat du combat dans une alerte
+ * Affiche le résultat du combat dans un toast
  * @param {Object} combatResult - Résultat du combat
  */
 function showCombatResult(combatResult) {
-    let message = combatResult.message || 'Combat terminé';
-    
-    if (combatResult.victoireJoueur && combatResult.experienceGagnee > 0) {
-        message += `\nVous gagnez ${combatResult.experienceGagnee} XP !`;
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        console.error("❌ Aucun conteneur de toasts trouvé (id='toast-container').");
+        return;
     }
-    
-    alert(message);
-}
 
+    // Construction du message
+    let message = combatResult.message || 'Combat terminé';
+    if (combatResult.victoireJoueur && combatResult.experienceGagnee > 0) {
+        message;
+    }
+
+    // Création du toast
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
+    // Style visuel selon le résultat
+    if (combatResult.victoireJoueur) {
+        toast.style.background = 'rgba(46, 204, 113, 0.9)'; // vert
+    } else {
+        toast.style.background = 'rgba(231, 76, 60, 0.9)'; // rouge
+    }
+
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    // Suppression après 4 secondes
+    setTimeout(() => {
+        toast.remove();
+    }, 4000);
+}

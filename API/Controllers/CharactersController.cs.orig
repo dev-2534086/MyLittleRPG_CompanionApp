@@ -15,14 +15,12 @@ namespace API_Pokemon.Controllers
         private readonly MonsterContext _context;
         private readonly ICombatService _combatService;
         private readonly TuileService _tuileService;
-        private readonly QuestService _questService;
 
-        public CharactersController(MonsterContext context, ICombatService combatService, TuileService tuileService, QuestService questService)
+        public CharactersController(MonsterContext context, ICombatService combatService, TuileService tuileService)
         {
             _context = context;
             _combatService = combatService;
             _tuileService = tuileService;
-            _questService = questService;
         }
 
         // Récupérer le personnage associé à un email
@@ -64,32 +62,18 @@ namespace API_Pokemon.Controllers
                 if (x < 0 || x >= GameConfig.MAP_SIZE || y < 0 || y >= GameConfig.MAP_SIZE)
                     return BadRequest("Destination is outside map boundaries.");
 
-                // Si c'est la ville (10,10) → déplacement sans combat
+                // Vérifier si mouvement valide
+                int dx = Math.Abs(x - character.PositionX);
+                int dy = Math.Abs(y - character.PositionY);
+                if (dx > 1 || dy > 1 || (dx == 0 && dy == 0))
+                    return BadRequest("Invalid movement. You can only move to an adjacent tile.");
+
+                // Si c’est la ville (10,10) → déplacement sans combat
                 if (x == GameConfig.CENTER_X && y == GameConfig.CENTER_Y)
                 {
                     character.PositionX = x;
                     character.PositionY = y;
                     await _context.SaveChangesAsync();
-                    
-                    // Vérifier les quêtes de tuile
-                    var centerTileQuestResult = await _questService.CheckTileReached(character.CharacterId, x, y, _context);
-                    
-                    if (centerTileQuestResult.HasProgress || centerTileQuestResult.HasCompletion)
-                    {
-                        return Ok(new 
-                        { 
-                            message = "Character moved successfully.", 
-                            character,
-                            questProgress = new DTO.QuestProgressInfo
-                            {
-                                HasProgress = centerTileQuestResult.HasProgress,
-                                HasCompletion = centerTileQuestResult.HasCompletion,
-                                ProgressMessages = centerTileQuestResult.ProgressMessages,
-                                CompletionMessages = centerTileQuestResult.CompletionMessages
-                            }
-                        });
-                    }
-                    
                     return Ok(new { message = "Character moved successfully.", character });
                 }
 
@@ -112,103 +96,12 @@ namespace API_Pokemon.Controllers
                     character.PositionX = x;
                     character.PositionY = y;
                     await _context.SaveChangesAsync();
-                    
-                    // Vérifier les quêtes de tuile
-                    var noMonsterTileQuestResult = await _questService.CheckTileReached(character.CharacterId, x, y, _context);
-                    
-                    if (noMonsterTileQuestResult.HasProgress || noMonsterTileQuestResult.HasCompletion)
-                    {
-                        return Ok(new 
-                        { 
-                            message = "Character moved successfully.", 
-                            character,
-                            questProgress = new DTO.QuestProgressInfo
-                            {
-                                HasProgress = noMonsterTileQuestResult.HasProgress,
-                                HasCompletion = noMonsterTileQuestResult.HasCompletion,
-                                ProgressMessages = noMonsterTileQuestResult.ProgressMessages,
-                                CompletionMessages = noMonsterTileQuestResult.CompletionMessages
-                            }
-                        });
-                    }
-                    
                     return Ok(new { message = "Character moved successfully.", character });
                 }
 
                 // Exécuter le combat
-                int levelBefore = character.Level;
                 var resultat = _combatService.ExecuterCombat(character, monstre);
-                
-                // Si le joueur a gagné, le déplacer sur la tuile
-                if (resultat.VictoireJoueur)
-                {
-                    character.PositionX = x;
-                    character.PositionY = y;
-                }
-                
                 await _context.SaveChangesAsync();
-
-                // Vérifier les quêtes de monstre si le joueur a gagné
-                QuestProgressResult? monsterQuestResult = null;
-                if (resultat.VictoireJoueur && monstre.Monstre != null)
-                {
-                    monsterQuestResult = await _questService.CheckMonsterKilled(character.CharacterId, monstre.Monstre, _context);
-                }
-                
-                // Vérifier les quêtes de tuile après le déplacement (si victoire)
-                QuestProgressResult? tileQuestResult = null;
-                if (resultat.VictoireJoueur)
-                {
-                    tileQuestResult = await _questService.CheckTileReached(character.CharacterId, character.PositionX, character.PositionY, _context);
-                }
-                
-                // Vérifier les quêtes de niveau si le niveau a changé
-                QuestProgressResult? levelQuestResult = null;
-                if (character.Level > levelBefore)
-                {
-                    levelQuestResult = await _questService.CheckLevelReached(character.CharacterId, character.Level, _context);
-                }
-                
-                // Combiner les résultats de quêtes
-                var combinedQuestResult = new QuestProgressResult();
-                if (monsterQuestResult != null)
-                {
-                    combinedQuestResult.HasProgress = combinedQuestResult.HasProgress || monsterQuestResult.HasProgress;
-                    combinedQuestResult.HasCompletion = combinedQuestResult.HasCompletion || monsterQuestResult.HasCompletion;
-                    combinedQuestResult.ProgressMessages.AddRange(monsterQuestResult.ProgressMessages);
-                    combinedQuestResult.CompletionMessages.AddRange(monsterQuestResult.CompletionMessages);
-                }
-                if (tileQuestResult != null)
-                {
-                    combinedQuestResult.HasProgress = combinedQuestResult.HasProgress || tileQuestResult.HasProgress;
-                    combinedQuestResult.HasCompletion = combinedQuestResult.HasCompletion || tileQuestResult.HasCompletion;
-                    combinedQuestResult.ProgressMessages.AddRange(tileQuestResult.ProgressMessages);
-                    combinedQuestResult.CompletionMessages.AddRange(tileQuestResult.CompletionMessages);
-                }
-                if (levelQuestResult != null)
-                {
-                    combinedQuestResult.HasProgress = combinedQuestResult.HasProgress || levelQuestResult.HasProgress;
-                    combinedQuestResult.HasCompletion = combinedQuestResult.HasCompletion || levelQuestResult.HasCompletion;
-                    combinedQuestResult.ProgressMessages.AddRange(levelQuestResult.ProgressMessages);
-                    combinedQuestResult.CompletionMessages.AddRange(levelQuestResult.CompletionMessages);
-                }
-                
-                if (combinedQuestResult.HasProgress || combinedQuestResult.HasCompletion)
-                {
-                    return Ok(new
-                    {
-                        message = resultat.Message,
-                        character,
-                        combatResult = resultat,
-                        questProgress = new DTO.QuestProgressInfo
-                        {
-                            HasProgress = combinedQuestResult.HasProgress,
-                            HasCompletion = combinedQuestResult.HasCompletion,
-                            ProgressMessages = combinedQuestResult.ProgressMessages,
-                            CompletionMessages = combinedQuestResult.CompletionMessages
-                        }
-                    });
-                }
 
                 return Ok(new
                 {
@@ -217,7 +110,46 @@ namespace API_Pokemon.Controllers
                     combatResult = resultat
                 });
             }
+<<<<<<< HEAD
+        }
+
+        [HttpPost("create/{email}")]
+        public async Task<ActionResult> CreateCharacter(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return BadRequest(new { message = "Email is required." });
+
+            if (!_context.isExistingEmail(email)) return NotFound(new { message = "No user found with this email." });
+
+            User currentUser = _context.Users.FirstOrDefault(x => x.Email == email);
+
+            if (_context.Characters.Any(c => c.UserId == currentUser.UserId)) return BadRequest(new { message = "This user already has a character." });
+
+            Character character = new Character(currentUser.UserName, currentUser.UserId);
+            _context.Characters.Add(character);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { email = currentUser.Email });
+        }
+
+        // POST: api/Characters/center/{email}
+        [HttpPost("center/{email}")]
+        public async Task<ActionResult> CenterCharacter(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return BadRequest(new { message = "Email is required." });
+            if (!_context.isExistingEmail(email)) return NotFound(new { message = "No user found with this email." });
+
+            var user = _context.Users.FirstOrDefault(u => u.Email == email);
+            var character = await _context.Characters.FirstOrDefaultAsync(c => c.UserId == user.UserId);
+            if (character == null) return NotFound(new { message = "Character not found." });
+
+            character.PositionX = 10;
+            character.PositionY = 10;
+            var starterMonster = await _context.InstanceMonstres
+                .FirstOrDefaultAsync(m => m.PositionX == 10 && m.PositionY == 10);
+            if (starterMonster != null)
+=======
             catch (Exception ex)
+>>>>>>> 2830f908d711154a121f56181abd11ee4f3b368a
             {
                 // Gestion robuste des erreurs
                 return StatusCode(500, new { message = "Internal server error.", error = ex.Message });

@@ -1,4 +1,5 @@
 ﻿using API_Pokemon.Models;
+using API_Pokemon.Models.Quest;
 using Microsoft.EntityFrameworkCore;
 
 namespace API_Pokemon.Data.Context
@@ -10,6 +11,9 @@ namespace API_Pokemon.Data.Context
         public DbSet<Character> Characters { get; set; }
         public DbSet<User>Users { get; set; }
         public DbSet<InstanceMonstre> InstanceMonstres { get; set; }
+        public DbSet<QuestTile> QuestTiles { get; set; }
+        public DbSet<QuestMonster> QuestMonster { get; set; }
+        public DbSet<QuestLevel> QuestLevel { get; set; }
 
         public MonsterContext(DbContextOptions<MonsterContext> options) : base(options) { }
 
@@ -37,6 +41,7 @@ namespace API_Pokemon.Data.Context
 
             modelBuilder.Entity<InstanceMonstre>()
                 .HasKey(t => new { t.PositionX, t.PositionY });
+
         }
     }
 }

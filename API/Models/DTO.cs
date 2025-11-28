@@ -1,4 +1,6 @@
-﻿namespace API_Pokemon.Models
+﻿using API_Pokemon.Models.Quest;
+
+namespace API_Pokemon.Models
 {
     public class DTO
     {
@@ -59,6 +61,21 @@
         public class GrilleJeuDto
         {
             public List<TuileAvecInfosDto> Tuiles { get; set; }
+        }
+
+        public class Quests
+        {
+            public List<QuestTile> questTiles { get; set; } = new List<QuestTile>();
+            public List<QuestLevel> questLevels { get; set; } = new List<QuestLevel>();
+            public List<QuestMonster> questMonsters { get; set; } = new List<QuestMonster>();
+        }
+
+        public class QuestProgressInfo
+        {
+            public bool HasProgress { get; set; }
+            public bool HasCompletion { get; set; }
+            public List<string> ProgressMessages { get; set; } = new List<string>();
+            public List<string> CompletionMessages { get; set; } = new List<string>();
         }
     }
 }

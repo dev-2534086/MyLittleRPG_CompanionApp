@@ -3,7 +3,6 @@
  * @returns {Promise<void>}
  */
 async function generateInitialTiles() {
-    await moveCharacterToPosition(CONFIG.GAME.INIT_X, CONFIG.GAME.INIT_Y);
     await loadTilesForPosition(gameState.currentX, gameState.currentY);
     renderMap();
     updateUI();
@@ -108,7 +107,7 @@ function createTileContent(tileData, x, y) {
         
         // Met à jour le titre avec les infos du monstre
         const title = `Monstre Niveau ${monster.niveau} - HP: ${monster.pointsVieActuels}/${monster.pointsVieMax} - Attaque: ${monster.attaque}`;
-        tileContent.parentElement.classList.add('has-monster');
+        tileContent.classList.add('has-monster');
     }
 
     tileContent.title = title; 
@@ -123,6 +122,7 @@ function createTileContent(tileData, x, y) {
  */
 function createUnknownTile(tile, x, y) {
     tile.classList.add('unknown');
+    tile.classList.add('tile');
     tile.textContent = '?';
     tile.title = `Tuile inconnue (${x}, ${y})`;
 }
@@ -136,6 +136,7 @@ async function centerMap() {
     await moveCharacterToPosition(gameState.currentX, gameState.currentY);
     await generateGrid();
     updateUI();
+    showToast(`🎯 Retour au centre (${gameState.currentX}, ${gameState.currentY}) !`);
 }
 
 /**
@@ -143,28 +144,44 @@ async function centerMap() {
  * @param {number} x - Position X
  * @param {number} y - Position Y
  */
-function selectTile(x, y) {
+async function selectTile(x, y) {
     const key = `${x},${y}`;
-    
+
+    // Si la tuile est déjà connue → on affiche ses infos
     if (gameState.generatedTiles[key]) {
         updateSelectedTileUI(gameState.generatedTiles[key]);
+        if (gameState.generatedTiles[key]?.monstre) {
+            showToast(`👾 Monstre détecté en (${x}, ${y}) ! Cliquez sur "Simuler combat" pour attaquer.`);
+        }
     } else {
-        console.log(`Tuile (${x},${y}) pas encore explorée`);
-        return;
+        const newTileData = await loadTileForPosition(x, y);
+
+        if (!newTileData) {
+            console.warn(`Échec du chargement de la tuile (${x},${y})`);
+            return;
+        }
+
+        gameState.generatedTiles[key] = newTileData;
+
+        renderMap();
+        updateSelectedTileUI(newTileData);
+
     }
 
+    // Met à jour l’état du jeu
     gameState.selectedTile = key;
-    
-    // Retirer la sélection précédente
+
+    // Retire la sélection précédente
     const allTiles = document.querySelectorAll('.tile');
     allTiles.forEach(tile => tile.classList.remove('selected'));
-    
-    // Ajouter la sélection à la nouvelle tuile
+
+    // Ajoute la classe 'selected' à la tuile cliquée
     const selectedTileElement = document.querySelector(`[data-x='${x}'][data-y='${y}']`);
     if (selectedTileElement) {
         selectedTileElement.classList.add('selected');
     }
 
+    // Garde la surbrillance sur la tuile du joueur
     highlightCurrentTile();
 }
 
@@ -221,6 +238,8 @@ async function moveMap(direction) {
         await generateGrid();
         updatePlayerUI();
         updateUI();
+
+        updateQuests(gameState.userEmail);
     } else {
         console.log('Tuile non traversable ou inconnue');
     }
@@ -248,4 +267,15 @@ function highlightCurrentTile() {
     if (currentTile) {
         currentTile.classList.add("player-tile");
     }
+}
+
+function showToast(message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.remove();
+    }, 4000);
 }

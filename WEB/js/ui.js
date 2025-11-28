@@ -18,7 +18,104 @@ function updateUI() {
     if (tilesCountElement) {
         tilesCountElement.textContent = tilesCount;
     }
+
+    if (gameState.currentPlayerEmail) {
+        updateQuests(gameState.currentPlayerEmail);
+    }
 }
+
+/**
+ * Rafraîchit proprement les quêtes sans recharger inutilement
+ * @param {string} email - Email du joueur connecté
+ */
+async function updateQuests(email) {
+    const container = document.getElementById('quests-container');
+    if (!container) return;
+
+    try {
+        const data = await fetchQuests(email);
+        const allQuests = [
+            ...(data.questTiles || []),
+            ...(data.questMonsters || []),
+            ...(data.questLevels || [])
+        ];
+
+        // Si aucune quête affichée → affichage complet
+        if (!container.hasChildNodes()) {
+            container.innerHTML = ''; 
+            allQuests.forEach(q => {
+                const type = q.goalLevel
+                    ? 'level'
+                    : q.goalMonster
+                    ? 'monster'
+                    : 'tile';
+
+                const typeInfo = {
+                    level:  { icon: '🧠', color: '#4CAF50', label: 'Niveau' },
+                    monster:{ icon: '👹', color: '#E91E63', label: 'Monstres' },
+                    tile:   { icon: '🗺️', color: '#2196F3', label: 'Exploration' }
+                }[type];
+
+                const id = q.questLevelId || q.questMonsterId || q.questTileId;
+
+                const questEl = document.createElement('div');
+                questEl.className = 'quest-card';
+                questEl.dataset.questId = id;
+                questEl.dataset.questType = type;
+                questEl.style.borderLeft = `6px solid ${typeInfo.color}`;
+
+                questEl.innerHTML = `
+                    <div class="quest-header">
+                        <h4>${typeInfo.icon} ${q.title}</h4>
+                        <span class="quest-type">${typeInfo.label}</span>
+                    </div>
+                    <p>${q.description}</p>
+                    <div class="quest-progress">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="quest-progress-${id}"></div>
+                        </div>
+                        <p class="progress-text" id="quest-text-${id}"></p>
+                    </div>
+                `;
+                container.appendChild(questEl);
+            });
+        }
+
+        // 🔄 Mise à jour des barres de progression et du texte
+        allQuests.forEach(q => {
+            const id = q.questLevelId || q.questMonsterId || q.questTileId;
+            const progressBar = document.getElementById(`quest-progress-${id}`);
+            const progressText = document.getElementById(`quest-text-${id}`);
+            if (!progressBar || !progressText) return;
+
+            let progress = 0;
+            let text = '';
+
+            if (q.goalMonster) {
+                progress = Math.min((q.nbMonsterKilled / q.goalMonster) * 100, 100);
+                text = `${q.nbMonsterKilled}/${q.goalMonster} ${q.monsterType}`;
+            } else if (q.goalLevel) {
+                text = `Atteindre le niveau ${q.goalLevel}`;
+            } else if (q.tilePositionX !== undefined) {
+                text = `Aller en (${q.tilePositionX}, ${q.tilePositionY})`;
+            }
+
+            if (q.isCompleted) {
+                progressBar.style.width = '100%';
+                progressText.textContent = '✅ Terminée';
+            } else {
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = text;
+            }
+        });
+
+    } catch (err) {
+        console.error('Erreur lors de la mise à jour des quêtes :', err);
+        container.innerHTML = '<p style="color:red;">Impossible de charger les quêtes.</p>';
+    }
+}
+
+
 
 /**
  * Met à jour l'interface pour la tuile sélectionnée

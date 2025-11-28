@@ -36,11 +36,6 @@ public class TuileService
         _db.Tuiles.Add(tuile);
         _db.SaveChanges();
 
-        if (!(x == 10 && y == 10) && tuile.EstTraversable && tuile.Type != TypeTuile.VILLE && _random.Next(100) < 10)
-        {
-            GenererMonstreSurTuile(x, y);
-        }
-
         return tuile;
     }
 
@@ -67,6 +62,7 @@ public class TuileService
         int roll = _random.Next(total);
         int cumulative = 0;
 
+
         foreach (var (type, chance, traversable) in proba)
         {
             cumulative += chance;
@@ -91,59 +87,6 @@ public class TuileService
             EstTraversable = true,
             ImageUrl = TypeTuileImageUrls[TypeTuile.HERBE]
         };
-    }
-
-    private void GenererMonstreSurTuile(int x, int y)
-    {
-        // Safety: block spawning on starting tile
-        if (x == 10 && y == 10) return;
-
-        // Vérifier qu'il n'y a pas déjà un monstre sur cette tuile
-        if (_db.InstanceMonstres.Any(m => m.PositionX == x && m.PositionY == y))
-            return;
-
-        // Récupérer un monstre aléatoire de la base de données
-        var monsters = _db.Monster.ToList();
-        if (!monsters.Any()) return;
-
-        var monstreBase = monsters[_random.Next(monsters.Count)];
-        
-        // Calculer le niveau basé sur la distance à la ville la plus proche
-        int distanceVille = CalculerDistanceVilleLaPlusProche(x, y);
-        int niveau = Math.Max(1, distanceVille);
-
-        var instance = new InstanceMonstre
-        {
-            PositionX = x,
-            PositionY = y,
-            MonstreId = monstreBase.idMonster,
-            Niveau = niveau,
-            PointsVieMax = monstreBase.pointVieBase + niveau,
-            PointsVieActuels = monstreBase.pointVieBase + niveau,
-            Attaque = monstreBase.forceBase + niveau,
-            Defense = monstreBase.defenseBase + niveau
-        };
-
-        _db.InstanceMonstres.Add(instance);
-        _db.SaveChanges();
-        
-    }
-
-    private int CalculerDistanceVilleLaPlusProche(int x, int y)
-    {
-        var villes = _db.Tuiles
-            .Where(t => t.Type == TypeTuile.VILLE)
-            .Select(t => new { t.PositionX, t.PositionY })
-            .ToList();
-
-        if (!villes.Any())
-            return 1;
-
-        int distance = villes
-            .Select(v => Math.Abs(v.PositionX - x) + Math.Abs(v.PositionY - y))
-            .Min();
-
-        return distance;
     }
 
     private List<TypeTuile> GetTypesAdjacents(int x, int y)

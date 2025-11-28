@@ -22,6 +22,8 @@ namespace API_Pokemon.Controllers
         public async Task<ActionResult<User>> Register([FromBody] RegisterRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Email)) return BadRequest(new { message = "Email is required." });
+            if (string.IsNullOrWhiteSpace(request.Password)) return BadRequest(new { message = "Password is required." });
+            if (string.IsNullOrWhiteSpace(request.Username)) return BadRequest(new { message = "Username is required." });
 
             if (_context.isExistingEmail(request.Email)) return Conflict(new { message = "This email is already registered." });
 

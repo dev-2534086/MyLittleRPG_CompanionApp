@@ -18,15 +18,15 @@ async function initGame() {
         // Mise à jour de l'interface utilisateur
         updatePlayerNameDisplay();
 
-        // Nettoyage de la carte
-        await clearMap();
-
         // Initialisation du personnage
         await initializeCharacter();
 
         // Génération des tuiles initiales
         await generateInitialTiles();
         
+        //Chargement des quêtes
+        displayQuests(gameState.userEmail);
+
         // Mise à jour de l'interface
         updatePlayerUI();
         updateUI();
@@ -73,7 +73,7 @@ async function initializeCharacter() {
         }
         */
         // Centrage du personnage
-        const centered = await centerCharacter(gameState.userEmail);
+        const centered = await centerMap(gameState.userEmail);
         if (centered) {
             localStorage.setItem('userCharacter', JSON.stringify(centered));
         } else {
@@ -90,6 +90,71 @@ async function initializeCharacter() {
         console.warn('Erreur lors de l\'initialisation du personnage:', error);
     }
 }
+
+/**
+ * Charge et affiche les quêtes dans l'onglet Quêtes
+ * @param {string} email - Email du joueur connecté
+ */
+async function displayQuests(email) {
+    const container = document.getElementById('quests-container');
+    if (!container) return;
+
+    container.innerHTML = '<p>Chargement des quêtes...</p>';
+
+    try {
+        const data = await fetchQuests(email);
+        const allQuests = [
+            ...(data.questTiles || []),
+            ...(data.questMonsters || []),
+            ...(data.questLevels || [])
+        ];
+
+        container.innerHTML = ''; // efface le message "chargement"
+
+        allQuests.forEach(q => {
+            const type = q.goalLevel
+                ? 'level'
+                : q.goalMonster
+                ? 'monster'
+                : 'tile';
+
+            const typeInfo = {
+                level:  { icon: '🧠', color: '#4CAF50', label: 'Niveau' },
+                monster:{ icon: '👹', color: '#E91E63', label: 'Monstres' },
+                tile:   { icon: '🗺️', color: '#2196F3', label: 'Exploration' }
+            }[type];
+
+            const questEl = document.createElement('div');
+            questEl.className = 'quest-card';
+            questEl.dataset.questId = q.questLevelId || q.questMonsterId || q.questTileId;
+            questEl.dataset.questType = type;
+
+            questEl.innerHTML = `
+                <div class="quest-header">
+                    <h4>${typeInfo.icon} ${q.title}</h4>
+                    <span class="quest-type">${typeInfo.label}</span>
+                </div>
+                <p>${q.description}</p>
+                <div class="quest-progress">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="quest-progress-${questEl.dataset.questId}"></div>
+                    </div>
+                    <p class="progress-text" id="quest-text-${questEl.dataset.questId}"></p>
+                </div>
+            `;
+
+            container.appendChild(questEl);
+        });
+
+        // 🔄 premier update après l’affichage
+        updateQuests(email);
+
+    } catch (err) {
+        console.error('Erreur lors du chargement des quêtes :', err);
+        container.innerHTML = '<p style="color:red;">Impossible de charger les quêtes.</p>';
+    }
+}
+
 
 
 

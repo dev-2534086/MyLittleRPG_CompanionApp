@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: e295fd1e5f001834bb2f6d7316eefb53
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - questCardPrefab: {instanceID: 0}
+  - contentParent: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

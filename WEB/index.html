@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mon Petit Monde RPG</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>🗺️ Mon Petit Monde RPG</h1>
+        <p>Explorez le monde généré par votre API • Position: <span id="current-position">(0, 0)</span></p>
+        <div class="header-buttons">
+            <button onclick="toggleTheme()" class="theme-toggle-btn">
+                <span id="theme-icon">🌙</span>
+                <span id="theme-text">Mode sombre</span>
+            </button>
+            <button onclick="logout()" class="button">Se déconnecter</button>
+        </div>
+    </header>
+    <div class="main-container">
+        <aside>
+            <!-- Carte Joueur -->
+            <div class="card">
+                <h3>🧑 Joueur</h3>
+                <hr>
+                <div class="card-row">
+                    <span class="card-label">Nom:</span>
+                    <span class="card-value" id="player-name">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Email:</span>
+                    <span class="card-value" id="player-email">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Niveau:</span>
+                    <span class="card-value" id="player-level">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Expérience:</span>
+                    <span class="card-value" id="player-xp">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Vie:</span>    
+                    <span class="card-value" id="player-hp">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Vie Max:</span>
+                    <span class="card-value" id="player-hpmax">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Force:</span>
+                    <span class="card-value" id="player-strength">-</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Défense:</span>
+                    <span class="card-value" id="player-defense">-</span>
+                </div>
+            </div>
+
+            <!-- Informations -->
+            <div class="card">
+                <h3>📊 Information</h3>
+                <hr>
+                <div class="card-row">
+                    <span class="card-label">Taille du monde:</span>
+                    <span class="card-value">50 × 50</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Position:</span>
+                    <span class="card-value" id="zone-display">20 × 20 tuiles</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Status API:</span>
+                    <span class="card-value status connected">Connecté</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Tuiles chargées:</span>
+                    <span class="card-value" id="tiles-count">9</span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="card">
+                <h3>🧭 Navigation</h3>
+                <div class="navigation">
+                    <div class="nav-row">
+                        <button class="nav-btn" onclick="moveMap('nord')">↑ Nord</button>
+                    </div>
+                    <div class="nav-row">
+                        <button class="nav-btn" onclick="moveMap('ouest')">← Ouest</button>
+                        <button class="nav-btn center" onclick="centerMap()">🎯 Centre</button>
+                        <button class="nav-btn" onclick="moveMap('est')">→ Est</button>
+                    </div>
+                    <div class="nav-row">
+                        <button class="nav-btn" onclick="moveMap('sud')">↓ Sud</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Légende -->
+            <div class="card">
+                <h3>🪪 Légende</h3>
+                <hr>
+                <div class="card-legend">
+                    <img class="card-img" src="Assets/TypesTuiles/Forest.png" />
+                    <span>Forêt</span>
+                </div>
+                <div class="card-legend">
+                    <img class="card-img" src="Assets/TypesTuiles/Mountain.png" />
+                    <span>Montagne</span>
+                </div>
+                <div class="card-legend">
+                    <img class="card-img" src="Assets/TypesTuiles/Plains.png" />
+                    <span>Plaine</span>
+                </div>
+                <div class="card-legend">
+                    <img class="card-img" src="Assets/TypesTuiles/River.png" />
+                    <span>Rivière</span>
+                </div>
+                <div class="card-legend">
+                    <img class="card-img" src="Assets/TypesTuiles/Road.png" />
+                    <span>Route</span>
+                </div>
+                <div class="card-legend">
+                    <img class="card-img" src="Assets/TypesTuiles/Town.png" />
+                    <span>Ville</span>
+                </div>
+            </div>
+
+            <!-- Tuile sélectionnée -->
+            <div class="card">
+                <h3>📍 Tuile sélectionnée</h3>
+                <hr>
+                <div class="card-selectd-row">
+                    <div class="card-selected selected-tile-row">
+                        <span>Position:</span>
+                        <span id="selected-position">(1, 1)</span>
+                    </div>
+                    <div class="card-selected selected-tile-row">
+                        <span>Type:</span>
+                        <span>
+                            <img class="card-img selected-type" src="Assets/TypesTuiles/Forest.png" />
+                        </span>
+                    </div>
+                    <div class="card-selected selected-tile-row">
+                        <span>Traversable:</span>
+                        <span id="selected-traversable">✅ Oui</span>
+                    </div>
+                </div>
+                
+            </div>
+
+        </aside>
+
+        <main>
+            <div class="map-header">
+                <h2>🗺️ Carte du Monde</h2>
+            </div>
+            <div class="map-grid" id="map-grid">
+            </div>
+            
+            <!-- Informations du monstre et simulateur de combat -->
+            <div class="bottom-panel">
+                <!-- Informations du monstre -->
+                <div class="monster-panel">
+                    <h3>🐲 Informations Monstre</h3>
+                    <div id="monster-info" style="display: none;">
+                    </div>
+                    <p class="monster-info-text">Sélectionnez une tuile avec un monstre pour voir ses informations.</p>
+                </div>
+
+                <!-- Simulateur de combat -->
+                <div class="combat-panel">
+                    <h3>⚔️ Simulateur de Combat</h3>
+                    <div id="combat-simulator" style="display: none;">
+                        <div class="combat-result">
+                            <h4>Résultat simulé:</h4>
+                            <div id="combat-message"></div>
+                            <div id="combat-details"></div>
+                        </div>
+                    </div>
+                    <p class="simulator-info">Sélectionnez une tuile avec un monstre pour simuler un combat.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer></footer>
+    
+    <!-- Chargement des scripts dans l'ordre correct -->
+    <script src="js/config.js"></script>
+    <script src="js/api-service.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/combat.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

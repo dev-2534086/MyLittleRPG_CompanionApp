@@ -1,0 +1,198 @@
+﻿using API_Pokemon.Data.Config;
+using API_Pokemon.Data.Context;
+using API_Pokemon.Models;
+using API_Pokemon.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using static API_Pokemon.Models.DTO;
+
+namespace API_Pokemon.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class CharactersController : ControllerBase
+    {
+        private readonly MonsterContext _context;
+        private readonly ICombatService _combatService;
+        private readonly TuileService _tuileService;
+
+        public CharactersController(MonsterContext context, ICombatService combatService, TuileService tuileService)
+        {
+            _context = context;
+            _combatService = combatService;
+            _tuileService = tuileService;
+        }
+
+        // Récupérer le personnage associé à un email
+        [HttpGet("{email}")]
+        public async Task<IActionResult> GetCharacter(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest(new { message = "Email is required." });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            var character = await _context.Characters.FirstOrDefaultAsync(c => c.UserId == user.UserId);
+            if (character == null)
+                return NotFound(new { message = "Character not found for this user." });
+
+            return Ok(new { message = "Character retrieved successfully.", character });
+        }
+
+        // Déplacer un personnage
+        [HttpPost("move/{x:int}/{y:int}")]
+        public async Task<IActionResult> MoveCharacter(int x, int y, [FromBody] string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest("Email is required.");
+
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                if (user == null)
+                    return NotFound("User not found.");
+
+                var character = await _context.Characters.FirstOrDefaultAsync(c => c.UserId == user.UserId);
+                if (character == null)
+                    return NotFound("Character not found.");
+
+                // Validation des coordonnées
+                if (x < 0 || x >= GameConfig.MAP_SIZE || y < 0 || y >= GameConfig.MAP_SIZE)
+                    return BadRequest("Destination is outside map boundaries.");
+
+                // Vérifier si mouvement valide
+                int dx = Math.Abs(x - character.PositionX);
+                int dy = Math.Abs(y - character.PositionY);
+                if (dx > 1 || dy > 1 || (dx == 0 && dy == 0))
+                    return BadRequest("Invalid movement. You can only move to an adjacent tile.");
+
+                // Si c’est la ville (10,10) → déplacement sans combat
+                if (x == GameConfig.CENTER_X && y == GameConfig.CENTER_Y)
+                {
+                    character.PositionX = x;
+                    character.PositionY = y;
+                    await _context.SaveChangesAsync();
+                    return Ok(new { message = "Character moved successfully.", character });
+                }
+
+                // Récupérer ou créer la tuile de destination
+                var destinationTile = _tuileService.GetOrCreateTuile(x, y);
+                if (!destinationTile.EstTraversable)
+                    return BadRequest("Destination tile is not traversable.");
+
+                // Définir la ville domicile si la tuile est une ville
+                if (destinationTile.Type == TypeTuile.VILLE)
+                    character.DefinirVilleDomicile(x, y);
+
+                // Vérifier s'il y a un monstre
+                var monstre = await _context.InstanceMonstres
+                    .Include(m => m.Monstre)
+                    .FirstOrDefaultAsync(m => m.PositionX == x && m.PositionY == y);
+
+                if (monstre == null)
+                {
+                    character.PositionX = x;
+                    character.PositionY = y;
+                    await _context.SaveChangesAsync();
+                    return Ok(new { message = "Character moved successfully.", character });
+                }
+
+                // Exécuter le combat
+                var resultat = _combatService.ExecuterCombat(character, monstre);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = resultat.Message,
+                    character,
+                    combatResult = resultat
+                });
+            }
+            catch (Exception ex)
+            {
+                // Gestion robuste des erreurs
+                return StatusCode(500, new { message = "Internal server error.", error = ex.Message });
+            }
+        }
+
+        // Créer un personnage
+        [HttpPost("create/{email}")]
+        public async Task<IActionResult> CreateCharacter(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest(new { message = "Email is required." });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                return NotFound(new { message = "No user found with this email." });
+
+            if (await _context.Characters.AnyAsync(c => c.UserId == user.UserId))
+                return BadRequest(new { message = "This user already has a character." });
+
+            var character = new Character(user.UserName, user.UserId);
+            await _context.Characters.AddAsync(character);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCharacter), new { email = user.Email }, new { message = "Character created successfully.", character });
+        }
+
+        // Ramener le personnage au centre
+        [HttpPost("center/{email}")]
+        public async Task<IActionResult> CenterCharacter(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest(new { message = "Email is required." });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            var character = await _context.Characters.FirstOrDefaultAsync(c => c.UserId == user.UserId);
+            if (character == null)
+                return NotFound(new { message = "Character not found." });
+
+            // Déplacer le joueur au centre
+            character.PositionX = GameConfig.CENTER_X;
+            character.PositionY = GameConfig.CENTER_Y;
+
+            // Supprimer un éventuel monstre au centre
+            var starterMonster = await _context.InstanceMonstres
+                .FirstOrDefaultAsync(m => m.PositionX == GameConfig.CENTER_X && m.PositionY == GameConfig.CENTER_Y);
+
+            if (starterMonster != null)
+                _context.InstanceMonstres.Remove(starterMonster);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Character centered to ({GameConfig.CENTER_X},{GameConfig.CENTER_Y}).", character });
+        }
+
+        // Simulation de combat
+        [HttpPost("simulate-combat")]
+        public async Task<IActionResult> SimulateCombat([FromBody] SimulateCombatRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Email))
+                return BadRequest("Email is required.");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (user == null)
+                return NotFound("User not found.");
+
+            var character = await _context.Characters.FirstOrDefaultAsync(c => c.UserId == user.UserId);
+            if (character == null)
+                return NotFound("Character not found.");
+
+            var monstre = await _context.InstanceMonstres
+                .Include(m => m.Monstre)
+                .FirstOrDefaultAsync(m => m.PositionX == request.MonsterX && m.PositionY == request.MonsterY);
+
+            if (monstre == null)
+                return NotFound("Monster not found.");
+
+            var resultat = _combatService.SimulerCombat(character, monstre);
+            return Ok(resultat);
+        }
+    }
+}

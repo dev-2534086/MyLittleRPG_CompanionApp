@@ -17,33 +17,28 @@ namespace API_Pokemon.Services
     public class QuestService
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly ILogger<QuestService> _logger;
         private readonly Random _random = new();
-        private Timer? _questGenerationTimer;
 
-        public QuestService(IServiceScopeFactory serviceScopeFactory)
+        public QuestService(IServiceScopeFactory serviceScopeFactory, ILogger<QuestService> logger)
         {
             _serviceScopeFactory = serviceScopeFactory;
-            // Démarrer le timer pour générer des quêtes toutes les 10 minutes
-            _questGenerationTimer = new Timer(GenerateQuestsForAllCharacters, null, TimeSpan.Zero, TimeSpan.FromMinutes(10));
+            _logger = logger;
         }
 
-        private async void GenerateQuestsForAllCharacters(object? state)
+        public async Task GenerateQuestsForConnectedEmployees()
         {
-            try
+            using var scope = _serviceScopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<MonsterContext>();
+
+            var characters = await context.Characters
+                .Where(c => context.Users.Any(u => u.UserId == c.UserId && u.IsConnected))
+                .ToListAsync();
+
+
+            foreach (var c in characters)
             {
-                using var scope = _serviceScopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<MonsterContext>();
-                
-                var characters = await context.Characters.ToListAsync();
-                
-                foreach (var character in characters)
-                {
-                    await EnsureCharacterHasEnoughQuests(character.CharacterId, context);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ERROR] Erreur lors de la génération de quêtes: {ex.Message}");
+                await EnsureCharacterHasEnoughQuests(c.CharacterId);
             }
         }
 
@@ -51,10 +46,10 @@ namespace API_Pokemon.Services
         {
             using var scope = context == null ? _serviceScopeFactory.CreateScope() : null;
             var dbContext = context ?? scope!.ServiceProvider.GetRequiredService<MonsterContext>();
-            
-            var activeQuestsCount = await GetActiveQuestsCount(characterId, dbContext);
-            
-            if (activeQuestsCount < 3)
+
+            var activeCount = await GetActiveQuestsCount(characterId, dbContext);
+
+            if (activeCount < 10)
             {
                 await GenerateRandomQuest(characterId, dbContext);
             }
@@ -62,14 +57,9 @@ namespace API_Pokemon.Services
 
         private async Task<int> GetActiveQuestsCount(int characterId, MonsterContext context)
         {
-            var tileQuests = await context.QuestTiles
-                .CountAsync(q => q.CharacterId == characterId && q.IsActive && !q.IsCompleted);
-            
-            var monsterQuests = await context.QuestMonster
-                .CountAsync(q => q.CharacterId == characterId && q.IsActive && !q.IsCompleted);
-            
-            var levelQuests = await context.QuestLevel
-                .CountAsync(q => q.CharacterId == characterId && q.IsActive && !q.IsCompleted);
+            var tileQuests = await context.QuestTiles.CountAsync(q => q.CharacterId == characterId && q.IsActive && !q.IsCompleted);
+            var monsterQuests = await context.QuestMonster.CountAsync(q => q.CharacterId == characterId && q.IsActive && !q.IsCompleted);
+            var levelQuests = await context.QuestLevel.CountAsync(q => q.CharacterId == characterId && q.IsActive && !q.IsCompleted);
 
             return tileQuests + monsterQuests + levelQuests;
         }
@@ -280,11 +270,6 @@ namespace API_Pokemon.Services
             };
 
             return quests;
-        }
-
-        public void Dispose()
-        {
-            _questGenerationTimer?.Dispose();
         }
     }
 }

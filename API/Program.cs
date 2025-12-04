@@ -28,6 +28,7 @@ builder.Services.AddScoped<GrilleService>();
 builder.Services.AddScoped<IMonstreService, MonstreService>();
 builder.Services.AddScoped<ICombatService, CombatService>();
 builder.Services.AddSingleton<QuestService>();
+builder.Services.AddHostedService<QuestBackgroundService>();
 
 // Configuration JSON
 builder.Services.AddControllers()

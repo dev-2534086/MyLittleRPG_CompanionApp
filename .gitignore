@@ -62,6 +62,8 @@ Assets/Unity.VisualScripting.Generated/**
 *.VC.db
 ExportedObj/
 .consulo/
+**/bin/
+**/obj/
 
 # Rider plugin
 Assets/Plugins/Editor/JetBrains*

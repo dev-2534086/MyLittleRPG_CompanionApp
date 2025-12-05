@@ -14,6 +14,7 @@ namespace API_Pokemon.Data.Context
         public DbSet<QuestTile> QuestTiles { get; set; }
         public DbSet<QuestMonster> QuestMonster { get; set; }
         public DbSet<QuestLevel> QuestLevel { get; set; }
+        public DbSet<HuntedMonster> HuntedMonsters { get; set; }
 
         public MonsterContext(DbContextOptions<MonsterContext> options) : base(options) { }
 

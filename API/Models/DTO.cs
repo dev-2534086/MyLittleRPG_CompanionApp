@@ -77,5 +77,24 @@ namespace API_Pokemon.Models
             public List<string> ProgressMessages { get; set; } = new List<string>();
             public List<string> CompletionMessages { get; set; } = new List<string>();
         }
+
+        public class MonsterPokedexDto
+        {
+            public int Id { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string SpriteUrl { get; set; } = string.Empty;
+            public string Type1 { get; set; } = string.Empty;
+            public string Type2 { get; set; } = string.Empty;
+            public bool IsHunted { get; set; }
+        }
+
+        public class PagedResult<T>
+        {
+            public IEnumerable<T> Items { get; set; } = Enumerable.Empty<T>();
+            public int Total { get; set; }
+            public int Offset { get; set; }
+            public int Limit { get; set; }
+        }
+
     }
 }

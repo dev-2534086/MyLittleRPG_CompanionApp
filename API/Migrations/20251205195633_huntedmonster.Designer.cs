@@ -4,6 +4,7 @@ using API_Pokemon.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace API_Pokemon.Migrations
 {
     [DbContext(typeof(MonsterContext))]
-    partial class MonsterContextModelSnapshot : ModelSnapshot
+    [Migration("20251205195633_huntedmonster")]
+    partial class huntedmonster
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -90,8 +93,8 @@ namespace API_Pokemon.Migrations
                     b.Property<int>("MonsterId")
                         .HasColumnType("int");
 
-                    b.Property<string>("PlayerEmail")
-                        .HasColumnType("longtext");
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

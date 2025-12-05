@@ -91,12 +91,15 @@ namespace API_Pokemon.Services
             var result = new CombatResult();
             int tour = 0;
 
+            // Récupérer l'utilisateur lié au Character pour son email
+            var user = _context.Users.FirstOrDefault(u => u.UserId == joueur.UserId);
+            string email = user?.Email ?? string.Empty;
+
             while (joueur.Hp > 0 && monstre.PointsVieActuels > 0)
             {
                 tour++;
                 var (degatsJoueur, degatsMonstre, _) = CalculerDegats(joueur, monstre);
 
-                // Application des dégâts réels
                 monstre.PointsVieActuels = Math.Max(0, monstre.PointsVieActuels - degatsJoueur);
                 joueur.Hp = Math.Max(0, joueur.Hp - degatsMonstre);
 
@@ -107,17 +110,39 @@ namespace API_Pokemon.Services
 
             result.NombreTours = tour;
 
-            // Victoire : gain d’expérience et suppression du monstre
             if (monstre.PointsVieActuels <= 0)
             {
                 result.VictoireJoueur = true;
                 result.ExperienceGagnee = monstre.CalculerExperienceDonnee();
                 joueur.GagnerExperience(result.ExperienceGagnee);
 
+                // Ajouter au Pokédex via l'email
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        var exists = _context.HuntedMonsters
+                            .Any(h => h.PlayerEmail == email && h.MonsterId == monstre.MonstreId);
+
+                        if (!exists)
+                        {
+                            _context.HuntedMonsters.Add(new HuntedMonster
+                            {
+                                PlayerEmail = email,
+                                MonsterId = monstre.MonstreId,
+                                HuntedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[WARN] Erreur HuntedMonster: " + ex.Message);
+                }
+
                 _monstreService.SupprimerMonstre(monstre.MonstreId);
                 result.Message = $"Victoire en {tour} tours ! Vous gagnez {result.ExperienceGagnee} XP.";
             }
-            // Défaite : le joueur est renvoyé à sa ville
             else
             {
                 result.DefaiteJoueur = true;
@@ -125,9 +150,9 @@ namespace API_Pokemon.Services
                 result.Message = $"Défaite en {tour} tours ! Vous êtes téléporté à votre ville domicile.";
             }
 
-            // Sauvegarde des modifications dans la base
             _context.SaveChanges();
             return result;
         }
+
     }
 }

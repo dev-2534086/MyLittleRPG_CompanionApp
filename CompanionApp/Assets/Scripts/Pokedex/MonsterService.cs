@@ -6,9 +6,11 @@ public class MonsterService : MonoBehaviour
 {
     public string apiUrl = "https://localhost:7029/api/Monstres/Pokedex";
     public string email = "test@test.test";
-    public async Task<MonsterPageResponse> GetPokemons(int offset, int limit)
+    public async Task<MonsterPageResponse> GetPokemons(int offset, int limit, string type = null)
     {
         string url = $"{apiUrl}?offset={offset}&limit={limit}&email={email}";
+
+        if (!string.IsNullOrEmpty(type)) url += $"&types={type}";
 
         using (UnityWebRequest req = UnityWebRequest.Get(url))
         {
@@ -23,7 +25,7 @@ public class MonsterService : MonoBehaviour
                 Debug.LogError("API ERROR: " + req.error);
                 return null;
             }
-
+            
             return JsonUtility.FromJson<MonsterPageResponse>(req.downloadHandler.text);
         }
     }

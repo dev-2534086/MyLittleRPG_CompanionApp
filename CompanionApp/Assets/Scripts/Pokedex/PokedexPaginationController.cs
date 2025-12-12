@@ -20,9 +20,11 @@ public class PokedexPaginationController : MonoBehaviour
     public TMP_Text pageInfo;
 
     [Header("Pagination Settings")]
-    public int limit = 9; // 3x3 grid
+    public int limit = 9;
     private int offset = 0;
     private int total = 0;
+
+    private string currentTypeFilter = null;
 
     public MonsterService service;
 
@@ -36,7 +38,7 @@ public class PokedexPaginationController : MonoBehaviour
 
     private async void LoadPage()
     {
-        MonsterPageResponse result = await service.GetPokemons(offset, limit);
+        MonsterPageResponse result = await service.GetPokemons(offset, limit, currentTypeFilter);
 
         if (result == null || result.items == null)
             return;
@@ -45,6 +47,13 @@ public class PokedexPaginationController : MonoBehaviour
 
         RefreshGrid(result.items);
         UpdatePaginationUI();
+    }
+
+    public void FilterByType(string type)
+    {
+        currentTypeFilter = type;
+        offset = 0;
+        LoadPage();
     }
 
     private void RefreshGrid(MonsterData[] items)

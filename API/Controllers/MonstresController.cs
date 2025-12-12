@@ -21,12 +21,12 @@ namespace API_Pokemon.Controllers
 
         [HttpGet("Pokedex")]
         public async Task<IActionResult> GetPokedex(
-    [FromQuery] string? email,        // <-- changement ici
-    [FromQuery] string? name,
-    [FromQuery] string? types,
-    [FromQuery] int offset = 0,
-    [FromQuery] int limit = DEFAULT_LIMIT,
-    CancellationToken ct = default)
+        [FromQuery] string? email,
+        [FromQuery] string? name,
+        [FromQuery] string? types,
+        [FromQuery] int offset = 0,
+        [FromQuery] int limit = DEFAULT_LIMIT,
+        CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(email))
                 return BadRequest("Email is required.");

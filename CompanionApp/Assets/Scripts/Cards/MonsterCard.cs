@@ -19,6 +19,7 @@ public class MonsterCard : MonoBehaviour
     public TMP_Text typeText;
     public Image icon;
     public GameObject huntedBadge;
+    public CanvasGroup canvasGroup;
 
     public void Setup(MonsterData data)
     {
@@ -30,6 +31,8 @@ public class MonsterCard : MonoBehaviour
             typeText.text = data.type1;
 
         huntedBadge.SetActive(data.isHunted);
+        
+        canvasGroup.alpha = data.isHunted ? 1f : 0.5f;
 
         StartCoroutine(LoadImage(data.spriteUrl));
     }

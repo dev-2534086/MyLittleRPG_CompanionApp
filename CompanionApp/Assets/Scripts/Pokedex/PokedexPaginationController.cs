@@ -18,6 +18,8 @@ public class PokedexPaginationController : MonoBehaviour
     public Button btnPrevious;
     public Button btnNext;
     public TMP_Text pageInfo;
+    public TMP_InputField searchInput;
+    private string currentSearch = null;
 
     [Header("Pagination Settings")]
     public int limit = 9;
@@ -33,12 +35,21 @@ public class PokedexPaginationController : MonoBehaviour
         btnPrevious.onClick.AddListener(OnPreviousPage);
         btnNext.onClick.AddListener(OnNextPage);
 
+        searchInput.onValueChanged.AddListener(OnSearchChanged);
+
+        LoadPage();
+    }
+
+    private void OnSearchChanged(string text)
+    {
+        currentSearch = text;
+        offset = 0;
         LoadPage();
     }
 
     private async void LoadPage()
     {
-        MonsterPageResponse result = await service.GetPokemons(offset, limit, currentTypeFilter);
+        MonsterPageResponse result = await service.GetPokemons(offset, limit, currentTypeFilter, currentSearch);
 
         if (result == null || result.items == null)
             return;

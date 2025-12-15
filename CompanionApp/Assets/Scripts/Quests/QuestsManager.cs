@@ -109,15 +109,25 @@ public class QuestsManager : MonoBehaviour
     public Transform contentParent;
     public GameObject questCardPrefab;
     public TextMeshProUGUI questCountText;
-    public string playerEmail = "test@test.test";
     public int refreshDelaySeconds = 600;
     public NotificationManager notificationManager;
 
     private int timer;
     private HashSet<string> existingQuestTitles = new HashSet<string>();
 
+    private string playerEmail;
+
     void Start()
     {
+        if (SessionManager.Instance == null || !SessionManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("QuestsManager: no session email");
+            return;
+        }
+
+        playerEmail = SessionManager.Instance.PlayerEmail;
+        Debug.Log("QuestsManager using email: " + playerEmail);
+
         timer = refreshDelaySeconds;
         StartCoroutine(FetchAndRefreshQuestsRoutine());
     }

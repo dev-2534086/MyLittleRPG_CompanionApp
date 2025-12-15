@@ -301,5 +301,39 @@ namespace API_Pokemon.Controllers
             var resultat = _combatService.SimulerCombat(character, monstre);
             return Ok(resultat);
         }
+
+        [HttpGet("Leaderboard")]
+        public async Task<IActionResult> Leaderboard([FromQuery] int limit = 10)
+        {
+            // Récupérer tous les personnages avec leur utilisateur
+            var characters = await _context.Characters
+                .Join(_context.Users,
+                      c => c.UserId,
+                      u => u.UserId,
+                      (c, u) => new { Character = c, Email = u.Email })
+                .ToListAsync();
+
+            var leaderboard = characters.Select(c => new
+            {
+                c.Character.CharacterId,
+                c.Character.Name,
+                c.Character.Level,
+                c.Character.Xp,
+                c.Character.Attack,
+                c.Character.Defense,
+                MonstersHunted = _context.HuntedMonsters.Count(h => h.PlayerEmail == c.Email),
+                Score = c.Character.Level * 10
+                      + c.Character.Xp
+                      + c.Character.Attack * 2
+                      + c.Character.Defense * 2
+                      + _context.HuntedMonsters.Count(h => h.PlayerEmail == c.Email) * 5
+            })
+            .OrderByDescending(c => c.Score)
+            .Take(limit)
+            .ToList();
+
+            return Ok(leaderboard);
+        }
+
     }
 }

@@ -8,7 +8,7 @@ public class UIPageManager : MonoBehaviour
 
     private void Start()
     {
-        SetActivePage(pagePokedex);
+        SetActivePage(pageCharacter);
     }
 
     public void ShowQuests()    => SetActivePage(pageQuests);

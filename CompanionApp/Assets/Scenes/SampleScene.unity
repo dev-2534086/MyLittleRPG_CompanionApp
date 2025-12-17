@@ -2951,7 +2951,7 @@ MonoBehaviour:
     icon: {fileID: -1204575867, guid: e05671686ce8ed747be4af8e19c2c137, type: 3}
   - id: LEVEL_10
     title: "H\xE9ros confirm\xE9"
-    description: Atteindre le niveau 5
+    description: Atteindre le niveau 10
     icon: {fileID: 666552527, guid: e05671686ce8ed747be4af8e19c2c137, type: 3}
   - id: LEVEL_100
     title: "Ma\xEEtre Aventurier"

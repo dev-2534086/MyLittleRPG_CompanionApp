@@ -5,6 +5,8 @@ public class UIPageManager : MonoBehaviour
     public GameObject pageQuests;
     public GameObject pageCharacter;
     public GameObject pagePokedex;
+    public GameObject pageClassement;
+    public GameObject pageBadges;
 
     private void Start()
     {
@@ -20,6 +22,8 @@ public class UIPageManager : MonoBehaviour
         pageQuests.SetActive(false);
         pageCharacter.SetActive(false);
         pagePokedex.SetActive(false);
+        pageClassement.SetActive(false);
+        pageBadges.SetActive(false);
 
         target.SetActive(true);
     }

@@ -303,9 +303,10 @@ namespace API_Pokemon.Controllers
         }
 
         [HttpGet("Leaderboard")]
-        public async Task<IActionResult> Leaderboard([FromQuery] int limit = 10)
+        public async Task<IActionResult> Leaderboard(
+        [FromQuery] string category = "level",
+        [FromQuery] int limit = 10)
         {
-            // Récupérer tous les personnages avec leur utilisateur
             var characters = await _context.Characters
                 .Join(_context.Users,
                       c => c.UserId,
@@ -313,24 +314,30 @@ namespace API_Pokemon.Controllers
                       (c, u) => new { Character = c, Email = u.Email })
                 .ToListAsync();
 
-            var leaderboard = characters.Select(c => new
+            var query = characters.Select(c => new
             {
                 c.Character.CharacterId,
                 c.Character.Name,
                 c.Character.Level,
                 c.Character.Xp,
+                c.Character.MaxHp,
                 c.Character.Attack,
                 c.Character.Defense,
-                MonstersHunted = _context.HuntedMonsters.Count(h => h.PlayerEmail == c.Email),
-                Score = c.Character.Level * 10
-                      + c.Character.Xp
-                      + c.Character.Attack * 2
-                      + c.Character.Defense * 2
-                      + _context.HuntedMonsters.Count(h => h.PlayerEmail == c.Email) * 5
-            })
-            .OrderByDescending(c => c.Score)
-            .Take(limit)
-            .ToList();
+                MonstersHunted = _context.HuntedMonsters.Count(h => h.PlayerEmail == c.Email)
+            });
+
+            query = category.ToLower() switch
+            {
+                "level" => query.OrderByDescending(c => c.Level),
+                "maxhp" => query.OrderByDescending(c => c.MaxHp),
+                "attack" => query.OrderByDescending(c => c.Attack),
+                "defense" => query.OrderByDescending(c => c.Defense),
+                _ => query.OrderByDescending(c => c.Level)
+            };
+
+            var leaderboard = query
+                .Take(limit)
+                .ToList();
 
             return Ok(leaderboard);
         }

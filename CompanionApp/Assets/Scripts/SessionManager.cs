@@ -23,14 +23,12 @@ public class SessionManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        Debug.Log("SessionManager initialized");
     }
 
     public void SetEmail(string email)
     {
         PlayerEmail = email;
         logoutSent = false;
-        Debug.Log("Session email set: " + PlayerEmail);
     }
 
     public bool IsLoggedIn()
@@ -48,7 +46,6 @@ public class SessionManager : MonoBehaviour
 
         logoutSent = true;
 
-        Debug.Log("LOGOUT TRIGGERED FOR: " + PlayerEmail);
         StartCoroutine(LogoutRequest(PlayerEmail));
 
         PlayerEmail = null;
@@ -67,31 +64,20 @@ public class SessionManager : MonoBehaviour
         req.SetRequestHeader("Content-Type", "application/json");
 
         yield return req.SendWebRequest();
-
-        if (req.result != UnityWebRequest.Result.Success)
-            Debug.LogWarning("Logout API failed: " + req.error);
-        else
-            Debug.Log("Logout API SUCCESS");
     }
 
-    // 🔥 APPELÉ QUAND TU STOP LE PLAY MODE
     private void OnDisable()
     {
-        Debug.Log("SessionManager OnDisable → logout");
         Logout();
     }
 
-    // 🔥 APPELÉ QUAND L'OBJET EST DÉTRUIT
     private void OnDestroy()
     {
-        Debug.Log("SessionManager OnDestroy → logout");
         Logout();
     }
 
-    // 🔥 EN BUILD (EXE / MOBILE)
     private void OnApplicationQuit()
     {
-        Debug.Log("Application quitting → logout");
         Logout();
     }
 

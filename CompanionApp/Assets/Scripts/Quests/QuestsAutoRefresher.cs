@@ -23,7 +23,7 @@ public class QuestsAutoRefresher : MonoBehaviour
 
         if (remaining.TotalSeconds <= 0)
         {
-            Debug.Log("⏳ Timer terminé → Mise à jour des quêtes...");
+            Debug.Log("Mise a jour des quetes...");
 
             StartCoroutine(RefreshQuests());
             nextRefreshTime = DateTime.UtcNow.AddSeconds(refreshDelaySeconds);

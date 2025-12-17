@@ -109,6 +109,7 @@ public class QuestsManager : MonoBehaviour
     public Transform contentParent;
     public GameObject questCardPrefab;
     public TextMeshProUGUI questCountText;
+    public TextMeshProUGUI timerText;
     public int refreshDelaySeconds = 600;
     public NotificationManager notificationManager;
 
@@ -117,20 +118,24 @@ public class QuestsManager : MonoBehaviour
 
     private string playerEmail;
 
-    void Start()
+    private void OnEnable()
     {
-        if (SessionManager.Instance == null || !SessionManager.Instance.IsLoggedIn())
-        {
-            Debug.LogError("QuestsManager: no session email");
-            return;
-        }
-
-        playerEmail = SessionManager.Instance.PlayerEmail;
-        Debug.Log("QuestsManager using email: " + playerEmail);
-
-        timer = refreshDelaySeconds;
-        StartCoroutine(FetchAndRefreshQuestsRoutine());
+        StartCoroutine(InitWhenLoggedIn());
     }
+
+private IEnumerator InitWhenLoggedIn()
+{
+    while (SessionManager.Instance == null || !SessionManager.Instance.IsLoggedIn())
+    {
+        yield return null;
+    }
+
+    playerEmail = SessionManager.Instance.PlayerEmail;
+    Debug.Log("QuestsManager ready for: " + playerEmail);
+
+    timer = refreshDelaySeconds;
+    StartCoroutine(FetchAndRefreshQuestsRoutine());
+}
 
     IEnumerator FetchAndRefreshQuestsRoutine()
     {
@@ -141,8 +146,8 @@ public class QuestsManager : MonoBehaviour
             {
                 int minutes = timer / 60;
                 int seconds = timer % 60;
-                if (questCountText != null)
-                    questCountText.text = $"{minutes:00}:{seconds:00}";
+                if (timerText != null)
+                    timerText.text = $"{minutes:00}:{seconds:00}";
                 yield return new WaitForSeconds(1f);
                 timer--;
             }
@@ -208,7 +213,7 @@ public class QuestsManager : MonoBehaviour
             }
 
             if (questCountText != null)
-                questCountText.text = finalQuests.Count.ToString();
+                questCountText.text = $"{finalQuests.Count.ToString()}/{finalQuests.Count.ToString()}";
         }
     }
 }
